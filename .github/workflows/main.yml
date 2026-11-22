@@ -1,7 +1,15 @@
-name: MYSTERY VERSE - Dyatlov Pass Documentary
+name: MYSTERY VERSE - Episode 002 Elisa Lam
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/main.yml"
+      - "input/elisa_lam.txt"
+      - "src/config.py"
+      - "src/audio/edge_tts_provider.py"
 
 permissions:
   contents: read
@@ -33,19 +41,20 @@ jobs:
       - name: Check engine
         run: python -m src.main doctor
 
-      - name: Render Indonesian documentary
+      - name: Render Indonesian documentary - Elisa Lam
         env:
           VIDEO_PROVIDER: stock
           EDGE_TTS_VOICE: id-ID-ArdiNeural
+          EDGE_TTS_RATE: "-10%"
           SUBTITLE_FONT: DejaVu Sans
           SUBTITLE_FONT_SIZE: "30"
-          SUBTITLE_COLOR: FFFFFF
+          SUBTITLE_COLOR: FFD700
           SUBTITLE_OUTLINE_COLOR: "000000"
           SUBTITLE_OUTLINE_WIDTH: "3"
           LOG_LEVEL: INFO
         run: |
-          python -m src.main generate input/dyatlov_pass.txt \
-            -o output/dyatlov-pass \
+          python -m src.main generate input/elisa_lam.txt \
+            -o output/elisa-lam \
             --tts edge \
             --video stock \
             --language id \
@@ -53,14 +62,14 @@ jobs:
 
       - name: Verify MP4
         run: |
-          test -s output/dyatlov-pass/final_video.mp4
+          test -s output/elisa-lam/final_video.mp4
           ffprobe -v error -show_entries format=duration,size \
-            -of default=noprint_wrappers=1 output/dyatlov-pass/final_video.mp4
+            -of default=noprint_wrappers=1 output/elisa-lam/final_video.mp4
 
       - name: Upload MP4 artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mystery-verse-dyatlov-pass
-          path: output/dyatlov-pass/final_video.mp4
+          name: mystery-verse-episode-002-elisa-lam
+          path: output/elisa-lam/final_video.mp4
           if-no-files-found: error
           retention-days: 7
