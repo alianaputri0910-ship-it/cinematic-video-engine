@@ -1,0 +1,66 @@
+name: MYSTERY VERSE - Dyatlov Pass Documentary
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install FFmpeg and fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Check engine
+        run: python -m src.main doctor
+
+      - name: Render Indonesian documentary
+        env:
+          VIDEO_PROVIDER: stock
+          EDGE_TTS_VOICE: id-ID-ArdiNeural
+          SUBTITLE_FONT: DejaVu Sans
+          SUBTITLE_FONT_SIZE: "30"
+          SUBTITLE_COLOR: FFFFFF
+          SUBTITLE_OUTLINE_COLOR: "000000"
+          SUBTITLE_OUTLINE_WIDTH: "3"
+          LOG_LEVEL: INFO
+        run: |
+          python -m src.main generate input/dyatlov_pass.txt \
+            -o output/dyatlov-pass \
+            --tts edge \
+            --video stock \
+            --language id \
+            --subtitles
+
+      - name: Verify MP4
+        run: |
+          test -s output/dyatlov-pass/final_video.mp4
+          ffprobe -v error -show_entries format=duration,size \
+            -of default=noprint_wrappers=1 output/dyatlov-pass/final_video.mp4
+
+      - name: Upload MP4 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mystery-verse-dyatlov-pass
+          path: output/dyatlov-pass/final_video.mp4
+          if-no-files-found: error
+          retention-days: 7
