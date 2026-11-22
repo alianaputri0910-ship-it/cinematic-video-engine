@@ -43,7 +43,7 @@ class EdgeTTSProvider:
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         voice = self._get_voice(locale)
-        communicate = edge_tts.Communicate(text, voice)
+        communicate = edge_tts.Communicate(text, voice, rate=self.config.edge_tts_rate)
 
         word_timings = []
         audio_data = bytearray()
