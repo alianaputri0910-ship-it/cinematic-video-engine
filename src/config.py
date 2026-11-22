@@ -32,6 +32,7 @@ class Config:
 
     # TTS
     edge_tts_voice: str = "en-US-GuyNeural"
+    edge_tts_rate: str = "-10%"
     kokoro_model_path: str = ""
 
     # Video gen (free cloud APIs)
@@ -77,6 +78,7 @@ def load_config(env_file: str = ".env") -> Config:
         video_provider=os.getenv("VIDEO_PROVIDER", "mock"),
         docker_video_url=os.getenv("DOCKER_VIDEO_URL", "http://localhost:8188"),
         edge_tts_voice=os.getenv("EDGE_TTS_VOICE", "en-US-GuyNeural"),
+        edge_tts_rate=os.getenv("EDGE_TTS_RATE", "-10%"),
         kokoro_model_path=os.getenv("KOKORO_MODEL_PATH", ""),
         hf_api_token=os.getenv("HF_API_TOKEN", ""),
         replicate_api_token=os.getenv("REPLICATE_API_TOKEN", ""),
