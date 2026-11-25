@@ -5,13 +5,19 @@ from pathlib import Path
 import requests
 import edge_tts
 
-STYLE = ("photorealistic live-action Indonesian rural supernatural horror film still, "
-"cold desaturated blue-gray shadows, muted forest green and earth tones, gloomy overcast dusk, "
-"subtle volumetric fog, realistic wet muddy village roads, aged wooden Indonesian houses, "
-"bamboo fences, dense tropical trees, restrained warm amber practical lights, dramatic but readable "
-"natural lighting, realistic human anatomy and skin texture, cinematic composition, 16:9 widescreen. "
-"No illustration, no anime, no cartoon, no glossy CGI, no text, no watermark.")
-NEGATIVE = "cartoon, anime, illustration, painting, 3d render, CGI, oversaturated, fantasy armor, text, watermark, collage, split screen"
+STYLE = ("Ultra-photorealistic live-action frame from a premium Indonesian supernatural horror feature film. "
+"Match this locked visual bible in EVERY scene: remote rural Indonesian village in the mountains; authentic weathered "
+"Javanese wooden and bamboo houses with old clay roof tiles, bamboo fences, muddy lanes, dense tropical foliage and "
+"misty forested hills. Gloomy overcast late-afternoon / blue-hour light, cold desaturated blue-gray and charcoal "
+"shadows, muted forest greens and wet earth browns, restrained warm amber practical lamps only. Atmospheric fine "
+"volumetric mist, damp surfaces, natural dramatic exposure with deep but readable shadows. Photographic skin pores, "
+"individual hair strands, realistic eyes, detailed fabric weave, aged wood grain, bamboo fibers, mud and foliage. "
+"Believable human anatomy and proportions, emotionally precise expressions, grounded Indonesian wardrobe and setting. "
+"Professional cinema camera, 35mm anamorphic lens, subtle film grain, natural depth of field, rich environmental detail, "
+"cinematic production design, landscape 16:9. This must look like a real photographed movie frame, not digital art.")
+NEGATIVE = ("illustration, cartoon, anime, painting, concept art, 3d render, glossy CGI, game art, plastic skin, "
+"beauty filter, oversaturated colors, fantasy costume, western village, modern city, malformed hands, extra fingers, "
+"duplicated people, distorted faces, text, letters, logo, watermark, collage, split screen, borders")
 
 def sentences(text):
     text = re.sub(r"\s+", " ", text).strip()
@@ -54,7 +60,11 @@ async def main():
     for i,s in enumerate(items):
         n=i+1
         # Sentence-specific scene direction is grounded in the actual narration; locked style is appended unchanged.
-        prompt=f"Scene {n}, depict this exact story moment faithfully: {s}. {STYLE}"
+        prompt=(f"Create one distinct cinematic shot for narration beat {n}. "
+                f"Depict ONLY this exact moment from the story; do not add plot events: {s}. "
+                "Compose a coherent, richly detailed film still with a clear foreground subject, "
+                "layered midground and atmospheric background. Keep the setting and art direction "
+                f"identical to all other shots. {STYLE}")
         image=imgs/f"scene_{n:04d}.png"
         audio=aud/f"scene_{n:04d}.mp3"
         if not image.exists():
