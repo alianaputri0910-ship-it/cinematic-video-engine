@@ -1,0 +1,51 @@
+name: MYSTERY VERSE — Render Kampung Jabang Mayit MP4
+on:
+  workflow_dispatch:
+  push:
+    branches: [mystery-verse/kampung-jabang-mayit]
+    paths:
+      - "input/kampung_jabang_mayit.txt"
+      - "tools/render_mystery_verse_stills.py"
+      - ".github/workflows/mystery-verse-render.yml"
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install FFmpeg and Python dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          pip install edge-tts requests
+      - name: Validate required secret
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::error::Add HF_TOKEN in repository Settings > Secrets and variables > Actions. Real images are required; mock output is disabled."
+            exit 1
+          fi
+      - name: Generate one photorealistic image and narration per sentence, then render MP4
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          EDGE_TTS_VOICE: id-ID-ArdiNeural
+          EDGE_TTS_RATE: "-12%"
+        run: |
+          python tools/render_mystery_verse_stills.py --input input/kampung_jabang_mayit.txt --output output/kampung-jabang-mayit
+      - name: Verify final MP4
+        run: |
+          test -s output/kampung-jabang-mayit/MYSTERY_VERSE_Kampung_Jabang_Mayit.mp4
+          ffprobe -v error -show_entries format=duration,size -of json output/kampung-jabang-mayit/MYSTERY_VERSE_Kampung_Jabang_Mayit.mp4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MYSTERY-VERSE-Kampung-Jabang-Mayit-MP4
+          path: output/kampung-jabang-mayit/
+          if-no-files-found: error
+          retention-days: 14
