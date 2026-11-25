@@ -1,0 +1,39 @@
+name: MYSTERY VERSE — Procedural MP4
+on:
+  workflow_dispatch:
+  push:
+    branches: [mystery-verse/kampung-jabang-mayit]
+    paths:
+      - "input/kampung_jabang_mayit.txt"
+      - "tools/render_mystery_verse_procedural.py"
+      - ".github/workflows/mystery-verse-procedural.yml"
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install FFmpeg and Edge TTS
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg librsvg2-bin
+          python -m pip install --upgrade pip
+          pip install edge-tts
+      - name: Render procedural scenes, narration and final MP4
+        run: |
+          python tools/render_mystery_verse_procedural.py --input input/kampung_jabang_mayit.txt --output output/kampung-jabang-mayit
+      - name: Verify MP4
+        run: |
+          test -s output/kampung-jabang-mayit/MYSTERY_VERSE_Kampung_Jabang_Mayit.mp4
+          ffprobe -v error -show_entries format=duration,size -of json output/kampung-jabang-mayit/MYSTERY_VERSE_Kampung_Jabang_Mayit.mp4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MYSTERY-VERSE-Kampung-Jabang-Mayit-Procedural-MP4
+          path: output/kampung-jabang-mayit/
+          if-no-files-found: error
+          retention-days: 14
