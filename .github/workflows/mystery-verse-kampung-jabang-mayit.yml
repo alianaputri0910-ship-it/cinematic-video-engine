@@ -1,0 +1,45 @@
+name: MYSTERY VERSE — Build sentence-level scene plan
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - mystery-verse/kampung-jabang-mayit
+    paths:
+      - "input/kampung_jabang_mayit.txt"
+      - "tools/build_mystery_verse_scene_plan.py"
+      - "docs/mystery-verse-kampung-jabang-mayit-production-lock.md"
+      - ".github/workflows/mystery-verse-kampung-jabang-mayit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  scene-plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Check episode script
+        run: test -s input/kampung_jabang_mayit.txt
+
+      - name: Build one-scene-per-sentence plan
+        run: |
+          python tools/build_mystery_verse_scene_plan.py \
+            input/kampung_jabang_mayit.txt \
+            --output output/kampung-jabang-mayit/scene-plan.json
+
+      - name: Upload scene plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: mystery-verse-kampung-jabang-mayit-scene-plan
+          path: output/kampung-jabang-mayit/scene-plan.json
+          if-no-files-found: error
+          retention-days: 14
