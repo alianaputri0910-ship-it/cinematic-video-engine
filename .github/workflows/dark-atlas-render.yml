@@ -1,5 +1,4 @@
 name: DARK ATLAS - Render Video
-
 on:
   workflow_dispatch:
     inputs:
@@ -7,45 +6,34 @@ on:
         description: 'Batas jumlah adegan (0 = semua)'
         required: true
         default: '40'
-
+  push:
+    paths:
+      - 'episodes/current.txt'
+      - '.github/workflows/dark-atlas-render.yml'
 permissions:
   contents: read
-
 concurrency:
   group: dark-atlas-render
   cancel-in-progress: false
-
 jobs:
   render:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
-      - name: Checkout project
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: pip
-
       - name: Install FFmpeg
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
-
-      - name: Install Python dependencies
+      - name: Install dependencies
         run: pip install -r requirements.txt
-
-      - name: Validate episode script
-        run: |
-          test -s episodes/current.txt
-          if grep -q 'GANTI DENGAN NASKAH' episodes/current.txt; then
-            echo 'Ganti teks contoh di episodes/current.txt dengan naskah episode.'
-            exit 1
-          fi
-
-      - name: Render DARK ATLAS video
+      - name: Validate script
+        run: test -s episodes/current.txt
+      - name: Render DARK ATLAS
         env:
           LLM_PROVIDER: rule_based
           EDGE_TTS_VOICE: id-ID-ArdiNeural
@@ -55,23 +43,21 @@ jobs:
           FFPROBE_PATH: ffprobe
           SUBTITLE_FONT: DejaVu Sans
           SUBTITLE_FONT_SIZE: '24'
+          MAX_SCENES: ${{ inputs.max_scenes || '40' }}
         run: |
           ARGS=()
-          if [ '${{ inputs.max_scenes }}' != '0' ]; then ARGS+=(--max-scenes '${{ inputs.max_scenes }}'); fi
+          if [ "$MAX_SCENES" != "0" ]; then ARGS+=(--max-scenes "$MAX_SCENES"); fi
           python -m src.main generate episodes/current.txt -o output --tts edge --video stock --language id --subtitles "${ARGS[@]}"
-
       - name: Verify MP4
         run: |
           test -s output/final_video.mp4
           ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1 output/final_video.mp4
-
-      - name: Upload rendered video and assets
+      - name: Upload MP4 and audio
         uses: actions/upload-artifact@v4
         with:
           name: dark-atlas-video-${{ github.run_number }}
           path: |
             output/final_video.mp4
-            output/**/*.srt
             output/**/*.ass
             output/**/*.mp3
           if-no-files-found: warn
