@@ -9,6 +9,8 @@ on:
   push:
     paths:
       - 'episodes/current.txt'
+      - 'src/audio/edge_tts_provider.py'
+      - 'src/video/stock_provider.py'
       - '.github/workflows/dark-atlas-render.yml'
 permissions:
   contents: read
