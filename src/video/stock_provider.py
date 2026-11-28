@@ -66,6 +66,10 @@ class StockVideoProvider:
         """Search for and download a free stock video matching the prompt."""
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        # Keep the downloaded source separate: FFmpeg cannot read and write
+        # the same MP4 path during normalization.
+        source_path = output_path.with_name(f"{output_path.stem}_source.mp4")
+        source_path.unlink(missing_ok=True)
 
         keywords = extract_keywords(prompt)
         self.logger.info(f"Stock search keywords: {keywords}")
@@ -74,20 +78,24 @@ class StockVideoProvider:
         # Try Wikimedia Commons first (with timeout)
         try:
             video_path = await asyncio.wait_for(
-                self._search_wikimedia(keywords, output_path), timeout=15.0
+                self._search_wikimedia(keywords, source_path), timeout=15.0
             )
             if video_path:
-                return await self._normalize(video_path, output_path, duration_seconds)
+                result = await self._normalize(video_path, output_path, duration_seconds)
+                source_path.unlink(missing_ok=True)
+                return result
         except asyncio.TimeoutError:
             self.logger.warning("Wikimedia search timed out")
 
         # Fall back to Internet Archive (with timeout)
         try:
             video_path = await asyncio.wait_for(
-                self._search_archive(keywords, output_path), timeout=20.0
+                self._search_archive(keywords, source_path), timeout=20.0
             )
             if video_path:
-                return await self._normalize(video_path, output_path, duration_seconds)
+                result = await self._normalize(video_path, output_path, duration_seconds)
+                source_path.unlink(missing_ok=True)
+                return result
         except asyncio.TimeoutError:
             self.logger.warning("Archive search timed out")
 
@@ -95,6 +103,7 @@ class StockVideoProvider:
         self.logger.warning("No stock video found, falling back to mock provider")
         from src.video.mock_provider import MockVideoProvider
         mock = MockVideoProvider(self.config)
+        source_path.unlink(missing_ok=True)
         return await mock.generate(prompt, duration_seconds, output_path)
 
     async def _search_wikimedia(self, keywords: str, output_path: Path) -> Path | None:
