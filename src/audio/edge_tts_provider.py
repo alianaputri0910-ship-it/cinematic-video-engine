@@ -37,32 +37,54 @@ class EdgeTTSProvider:
         return DEFAULT_VOICES.get(lang, "en-US-GuyNeural")
 
     async def synthesize(self, text: str, locale: str, output_path: Path) -> AudioResult:
-        """Synthesize speech and extract word-level timings."""
+        """Synthesize speech with retries for intermittent upstream failures."""
         import edge_tts
 
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-
         voice = self._get_voice(locale)
-        communicate = edge_tts.Communicate(text, voice, rate=self.config.edge_tts_rate)
-
         word_timings = []
         audio_data = bytearray()
+        last_error = None
 
-        async for chunk in communicate.stream():
-            if chunk["type"] == "audio":
-                audio_data.extend(chunk["data"])
-            elif chunk["type"] == "WordBoundary":
-                word_timings.append({
-                    "word": chunk["text"],
-                    "start_ms": chunk["offset"] // 10000,
-                    "end_ms": (chunk["offset"] + chunk["duration"]) // 10000,
-                })
+        # Microsoft's free endpoint can intermittently close without audio.
+        # A new Communicate instance is required for each retry.
+        for attempt in range(4):
+            audio_data.clear()
+            word_timings.clear()
+            communicate = edge_tts.Communicate(
+                text, voice, rate=self.config.edge_tts_rate
+            )
+            try:
+                async for chunk in communicate.stream():
+                    if chunk["type"] == "audio":
+                        audio_data.extend(chunk["data"])
+                    elif chunk["type"] == "WordBoundary":
+                        word_timings.append({
+                            "word": chunk["text"],
+                            "start_ms": chunk["offset"] // 10000,
+                            "end_ms": (chunk["offset"] + chunk["duration"]) // 10000,
+                        })
+                if audio_data:
+                    break
+                raise RuntimeError("Edge TTS returned an empty audio stream")
+            except Exception as exc:
+                last_error = exc
+                if attempt == 3:
+                    raise RuntimeError(
+                        f"Edge TTS failed after 4 attempts using {voice}: {exc}"
+                    ) from exc
+                await asyncio.sleep(2 ** (attempt + 1))
+
+        if not audio_data:
+            raise RuntimeError(f"Edge TTS returned no audio: {last_error}")
 
         output_path.write_bytes(audio_data)
 
         from src.utils.ffmpeg import probe_duration
-        duration_ms = int(await probe_duration(str(output_path), self.config.ffprobe_path) * 1000)
+        duration_ms = int(
+            await probe_duration(str(output_path), self.config.ffprobe_path) * 1000
+        )
 
         return AudioResult(
             file=str(output_path),
