@@ -8,6 +8,7 @@ from src.config import Config
 # Language → default voice mapping
 DEFAULT_VOICES = {
     "en": "en-US-GuyNeural",
+    "id": "id-ID-ArdiNeural",
     "bn": "bn-BD-PradeepNeural",
     "es": "es-ES-AlvaroNeural",
     "fr": "fr-FR-HenriNeural",
@@ -24,7 +25,7 @@ DEFAULT_VOICES = {
 
 
 class EdgeTTSProvider:
-    """TTS provider using Microsoft Edge TTS (free, uncapped)."""
+    """TTS provider using Microsoft Edge TTS (free, no API key)."""
 
     def __init__(self, config: Config):
         self.config = config
@@ -54,14 +55,12 @@ class EdgeTTSProvider:
             elif chunk["type"] == "WordBoundary":
                 word_timings.append({
                     "word": chunk["text"],
-                    "start_ms": chunk["offset"] // 10000,  # 100ns → ms
+                    "start_ms": chunk["offset"] // 10000,
                     "end_ms": (chunk["offset"] + chunk["duration"]) // 10000,
                 })
 
-        # Write audio file
         output_path.write_bytes(audio_data)
 
-        # Get duration via file probe
         from src.utils.ffmpeg import probe_duration
         duration_ms = int(await probe_duration(str(output_path), self.config.ffprobe_path) * 1000)
 
